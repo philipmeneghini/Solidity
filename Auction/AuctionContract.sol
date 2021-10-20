@@ -37,6 +37,9 @@ contract AuctionInstance{
         bidIncrement = 100;             //bid incrmenet is 100 wei
     }
     
+    event bidPlaced(address bidder, address newHighestBidder, uint highestbid);
+    event bidFinalized(address highestbidder, uint highestbid);
+    
     modifier notOwner(){                                        //modifier to make sure the sender is not the owner
         require(msg.sender != owner);
         _;
@@ -49,6 +52,11 @@ contract AuctionInstance{
     
     modifier beforeEnd(){                                       //modifier to make sure the auction hasn't ended yet
         require(block.timestamp<= endTime);
+        _;
+    }
+    
+    modifier onlyOwner(){                                       //modifier to make sure the sender is the owner
+        require(msg.sender ==owner);
         _;
     }
     
@@ -68,11 +76,6 @@ contract AuctionInstance{
         else{
             return a;
         }
-    }
-    
-    modifier onlyOwner(){                                       //modifier to make sure the sender is the owner
-        require(msg.sender ==owner);
-        _;
     }
     
     function cancelAuction() public onlyOwner{                  //function cancels the auction only the owner can do this
@@ -100,8 +103,10 @@ contract AuctionInstance{
             //if bid is tied then highest bidder will still win the bid because they put their bid in first
         }else{
             highestBindingBid = min(currentBid, bids[highestBidder] + bidIncrement); //if current bid is larger than highest bid then previous highest bid gets incremented and becomes the highest binding bid
-            highestBidder = payable(msg.sender);                                    //highest bidder becomes the cender of the current bid
+            highestBidder = payable(msg.sender);                                    //highest bidder becomes the sender of the current bid
         }
+        
+        emit bidPlaced(msg.sender, highestBidder, highestBindingBid);               //emits a bid placed event on the blockchain
     }
     
     function finalizeAuction() public onlyOwner{                    //only the owner can finalize the auction after time has run out
@@ -115,6 +120,8 @@ contract AuctionInstance{
             bids[highestBidder]-=highestBindingBid;     //takes highest bindingbid from the highest bidder for the auction item
             auctionState = State.Ended;                 //changes the auction state to ended
         }
+        
+        emit bidFinalized(highestBidder, highestBindingBid);                        //emits a bid finalized event after the owner finalizes the bid
     }
 
     function recieveMoney() public{             //each player must call this function to recieve their money back
